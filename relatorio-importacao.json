@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-11-08T15:43:59.233493+00:00",
+  "processedThisRun": 0,
+  "overlayWithPlayers": 36,
+  "overlayByKind": {
+    "filme": 36
+  },
+  "blocked": {
+    "source": "https://filmesamadoresgratis.com/filme/creed-ii/",
+    "reason": "HTTP 403; importacao interrompida."
+  },
+  "failures": [],
+  "note": "Players extraidos nao equivalem a reproducao validada. Catalogo original preservado."
+}

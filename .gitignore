@@ -1,3 +1,5 @@
 .cache-indice/
 __pycache__/
 *.pyc
+
+.progresso-players.json

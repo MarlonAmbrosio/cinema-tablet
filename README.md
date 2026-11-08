@@ -1,5 +1,9 @@
 # Sala — índice completo para GitHub Pages
 
+Publicado em https://marlonambrosio.github.io/cinema-tablet/
+
+Correção: `players.js` acrescenta players públicos para os 36 primeiros filmes, preservando os 16 anteriores. A interface começa com o filtro **Com player importado** (52 filmes). O índice completo continua disponível em Disponibilidade. Players importados não equivalem a reprodução validada. `catalogo.json` e `servidores.csv` continuam com os 16 originais; os 36 adicionais ficam no arquivo complementar `players.js`. Inclua esse arquivo ao publicar.
+
 Importação dos 89 sitemaps públicos de conteúdo do site consultado em 8 de novembro de 2026. Foram removidas entradas duplicadas e páginas de índice.
 
 | Tipo | Registros |
@@ -27,7 +31,7 @@ Os sitemaps não fornecem nomes oficiais. Para 87.027 registros, o nome exibido 
 3. Selecione a branch `main` e a pasta `/(root)`; salve.
 4. Abra no tablet o endereço HTTPS informado pelo GitHub.
 
-Arquivos necessários ao site: `index.html`, `estilo.css`, `app.js`, `catalogo.js`, `.nojekyll` e todos os arquivos em `dados/`. Os demais arquivos são documentação, dados para exportação e ferramentas de atualização. Não há chaves ou senhas. O pacote não foi publicado automaticamente.
+Arquivos necessários ao site: `index.html`, `estilo.css`, `app.js`, `catalogo.js`, `.nojekyll` e todos os arquivos em `dados/`. Os demais arquivos são documentação, dados para exportação e ferramentas de atualização. Não há chaves ou senhas. A interface foi publicada no GitHub Pages.
 
 ## Desempenho no tablet
 

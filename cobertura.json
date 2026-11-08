@@ -1,0 +1,14 @@
+{
+  "sitemaps": 89,
+  "failedSitemaps": 0,
+  "counts": {
+    "filme": 14631,
+    "serie": 2932,
+    "episodio": 64186,
+    "temporada": 5294
+  },
+  "total": 87043,
+  "withPlayers": 16,
+  "urlLabels": 87027,
+  "note": "Indice completo dos sitemaps publicos. Nao equivale a players resolvidos ou reproducao testada."
+}

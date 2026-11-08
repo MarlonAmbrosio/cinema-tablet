@@ -6,6 +6,7 @@
     items = expand(window.CATALOGO_COMPACTO);
     window.CATALOGO_COMPACTO = null;
   }
+  items.forEach(function (item) { var extra = (window.SALA_PLAYERS || {})[item.id]; if (extra) { item.title = extra.title; item.poster = extra.poster; item.servers = extra.servers; } });
   var page = 1, pageSize = 36, totalPages = 1, searchTimer = null;
   function normalize(text) { text = text.toLowerCase(); return typeof text.normalize === 'function' ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : text; }
   items.forEach(function (item) { item.searchText = normalize(item.title); });
@@ -37,7 +38,8 @@
   function safeUrl(url) { return typeof url === 'string' && /^https:\/\//i.test(url); }
   function render() {
     var query = normalize(byId('search').value), kind = byId('kind').value;
-    var list = items.filter(function (item) { return (!onlySaved || has(item.id)) && (!kind || (item.kind || 'filme') === kind) && item.searchText.indexOf(query) !== -1; });
+    var readyOnly = byId('availability').value === 'ready';
+    var list = items.filter(function (item) { return (!readyOnly || item.servers.length > 0) && (!onlySaved || has(item.id)) && (!kind || (item.kind || 'filme') === kind) && item.searchText.indexOf(query) !== -1; });
     totalPages = Math.max(1, Math.ceil(list.length / pageSize)); page = Math.max(1, Math.min(page, totalPages));
     var grid = byId('grid'); grid.textContent = '';
     byId('total').textContent = catalogTotal; byId('saved-count').textContent = favorites.length;
@@ -50,7 +52,7 @@
       var card = element('article', 'card'), wrap = element('div', 'poster-wrap');
       wrap.appendChild(element('div', 'poster-fallback', item.title));
       if (safeUrl(item.poster)) { var image = element('img', 'poster'); image.src = item.poster; image.alt = ''; image.loading = 'lazy'; image.referrerPolicy = 'no-referrer'; image.onerror = function () { image.style.display = 'none'; }; wrap.appendChild(image); }
-      var watch = element('button', 'watch'); watch.setAttribute('aria-label', 'Assistir ' + item.title); watch.appendChild(element('span', 'watch-label', 'ASSISTIR')); watch.appendChild(element('span', 'play-circle', '▶')); watch.onclick = function () { openMovie(item); }; wrap.appendChild(watch);
+      var watch = element('button', 'watch'); watch.setAttribute('aria-label', (item.servers.length ? 'Assistir ' : 'Ver detalhes de ') + item.title); watch.appendChild(element('span', 'watch-label', item.servers.length ? 'ASSISTIR' : 'VER ORIGEM')); watch.appendChild(element('span', 'play-circle', item.servers.length ? '▶' : '↗')); watch.onclick = function () { openMovie(item); }; wrap.appendChild(watch);
       var save = element('button', 'save' + (has(item.id) ? ' saved' : ''), has(item.id) ? '✓' : '+'); save.setAttribute('aria-label', (has(item.id) ? 'Remover da lista: ' : 'Salvar na lista: ') + item.title); save.setAttribute('aria-pressed', String(has(item.id))); save.onclick = function () { var index = favorites.indexOf(item.id); if (index === -1) favorites.push(item.id); else favorites.splice(index, 1); store('sala-favoritos', favorites); render(); }; wrap.appendChild(save);
       card.appendChild(wrap); card.appendChild(element('h3', '', item.title)); card.appendChild(element('div', 'meta', item.servers.length ? item.servers.length + ' opções de player' : 'Abrir pela página de origem')); grid.appendChild(card);
     });
@@ -66,6 +68,9 @@
   function openMovie(item) {
     active = item; lastFocus = document.activeElement; byId('modal-title').textContent = item.title; byId('servers').textContent = '';
     byId('source-link').href = safeUrl(item.source) ? item.source : '#';
+    byId('player').hidden = !item.servers.length;
+    byId('server-bar').hidden = !item.servers.length;
+    byId('player-note').textContent = item.servers.length ? 'Escolha um servidor abaixo. A disponibilidade depende do player externo; anúncios internos podem aparecer.' : 'Este registro só tem a página de origem. Ainda não há player importado para assistir aqui.';
     byId('player').textContent = ''; byId('player').appendChild(element('div', 'player-placeholder', item.servers.length ? 'Escolha um servidor para começar.' : 'Este título foi incluído no catálogo, mas seu player ainda não foi importado. Use o link da página de origem abaixo.'));
     item.servers.forEach(function (server, index) { var button = element('button', '', server.name); button.onclick = function () { chooseServer(server, index); }; byId('servers').appendChild(button); });
     byId('modal').hidden = false; document.body.classList.add('modal-open'); byId('close').focus();
@@ -75,6 +80,7 @@
   function updateResume(id) { var item = items.filter(function (i) { return i.id === id; })[0]; if (!item) return; var box = byId('resume'); box.textContent = ''; box.appendChild(element('span', '', 'SEU ÚLTIMO TÍTULO')); var button = element('button', '', item.title + '  ↗'); button.onclick = function () { openMovie(item); }; box.appendChild(button); box.hidden = false; }
   byId('search').oninput = function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { page = 1; render(); }, 200); };
   byId('kind').onchange = function () { page = 1; ensureKind(byId('kind').value, render); };
+  byId('availability').onchange = function () { page = 1; render(); };
   byId('previous').onclick = function () { page--; render(); byId('section-title').scrollIntoView(); };
   byId('next').onclick = function () { page++; render(); byId('section-title').scrollIntoView(); };
   byId('all').onclick = function () { onlySaved = false; tabs(); };

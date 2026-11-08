@@ -6,13 +6,14 @@
     items = expand(window.CATALOGO_COMPACTO);
     window.CATALOGO_COMPACTO = null;
   }
-  items.forEach(function (item) { var extra = (window.SALA_PLAYERS || {})[item.id]; if (extra) { item.title = extra.title; item.poster = extra.poster; item.servers = extra.servers; } });
+  function enrich(item) { var extra = (window.SALA_PLAYERS || {})[item.id]; if (extra) { item.title = extra.title; item.poster = extra.poster; item.servers = extra.servers; } item.searchText = normalize(item.title); return item; }
+  items.forEach(enrich);
   var page = 1, pageSize = 36, totalPages = 1, searchTimer = null;
   function normalize(text) { text = text.toLowerCase(); return typeof text.normalize === 'function' ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : text; }
   items.forEach(function (item) { item.searchText = normalize(item.title); });
   var loadedKinds = {filme:true}, loadingKinds = {}, catalogTotal = items.length;
   if (window.CATALOGO_RESUMO) { catalogTotal = 0; Object.keys(window.CATALOGO_RESUMO).forEach(function (key) { catalogTotal += window.CATALOGO_RESUMO[key]; }); }
-  window.SALA_RECEBER = function (kind, rows) { if (loadedKinds[kind]) return; var extra = expand(rows); extra.forEach(function (item) { item.searchText = normalize(item.title); }); items = items.concat(extra); loadedKinds[kind] = true; };
+  window.SALA_RECEBER = function (kind, rows) { if (loadedKinds[kind]) return; var extra = expand(rows); extra.forEach(enrich); items = items.concat(extra); loadedKinds[kind] = true; };
   function ensureKind(kind, done) {
     var wanted = kind ? [kind] : ['serie','temporada','episodio'];
     function next() {
@@ -36,15 +37,20 @@
   function has(id) { return favorites.indexOf(id) !== -1; }
   function element(tag, cls, text) { var node = document.createElement(tag); if (cls) node.className = cls; if (text !== undefined) node.textContent = text; return node; }
   function safeUrl(url) { return typeof url === 'string' && /^https:\/\//i.test(url); }
+  var episodeFilter = null;
+  function slug(item) { return item.source.replace(/\/$/, '').split('/').pop(); }
+  function escapeRegex(text) { return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   function render() {
     var query = normalize(byId('search').value), kind = byId('kind').value;
     var readyOnly = byId('availability').value === 'ready';
-    var list = items.filter(function (item) { return (!readyOnly || item.servers.length > 0) && (!onlySaved || has(item.id)) && (!kind || (item.kind || 'filme') === kind) && item.searchText.indexOf(query) !== -1; });
+    var list = items.filter(function (item) { return (!episodeFilter || (item.kind === 'episodio' && episodeFilter.pattern.test(slug(item)))) && (!readyOnly || item.servers.length > 0) && (!onlySaved || has(item.id)) && (!kind || (item.kind || 'filme') === kind) && item.searchText.indexOf(query) !== -1; });
+    if (episodeFilter) list.sort(function (a,b) { var x=slug(a).match(/-(\d+)x(\d+)$/), y=slug(b).match(/-(\d+)x(\d+)$/); return Number(x[1])-Number(y[1]) || Number(x[2])-Number(y[2]); });
     totalPages = Math.max(1, Math.ceil(list.length / pageSize)); page = Math.max(1, Math.min(page, totalPages));
     var grid = byId('grid'); grid.textContent = '';
     byId('total').textContent = catalogTotal; byId('saved-count').textContent = favorites.length;
     byId('result-count').textContent = list.length + (list.length === 1 ? ' título' : ' títulos');
-    byId('section-title').textContent = onlySaved ? 'Guardados para depois' : 'Explore o catálogo';
+    byId('section-title').textContent = episodeFilter ? 'Episódios indexados: ' + episodeFilter.title : (onlySaved ? 'Guardados para depois' : 'Explore o catálogo');
+    byId('clear-series').hidden = !episodeFilter;
     byId('empty').hidden = list.length !== 0;
     byId('page-label').textContent = 'Página ' + page + ' de ' + totalPages;
     byId('previous').disabled = page <= 1; byId('next').disabled = page >= totalPages;
@@ -52,7 +58,8 @@
       var card = element('article', 'card'), wrap = element('div', 'poster-wrap');
       wrap.appendChild(element('div', 'poster-fallback', item.title));
       if (safeUrl(item.poster)) { var image = element('img', 'poster'); image.src = item.poster; image.alt = ''; image.loading = 'lazy'; image.referrerPolicy = 'no-referrer'; image.onerror = function () { image.style.display = 'none'; }; wrap.appendChild(image); }
-      var watch = element('button', 'watch'); watch.setAttribute('aria-label', (item.servers.length ? 'Assistir ' : 'Ver detalhes de ') + item.title); watch.appendChild(element('span', 'watch-label', item.servers.length ? 'ASSISTIR' : 'VER ORIGEM')); watch.appendChild(element('span', 'play-circle', item.servers.length ? '▶' : '↗')); watch.onclick = function () { openMovie(item); }; wrap.appendChild(watch);
+      var isSeries = item.kind === 'serie' || item.kind === 'temporada';
+      var watch = element('button', 'watch'); watch.setAttribute('aria-label', (item.servers.length ? 'Ver players de ' : 'Ver detalhes de ') + item.title); watch.appendChild(element('span', 'watch-label', item.servers.length ? 'VER PLAYERS' : (isSeries ? 'EPISÓDIOS' : 'VER ORIGEM'))); watch.appendChild(element('span', 'play-circle', item.servers.length ? '▶' : '↗')); watch.onclick = function () { openMovie(item); }; wrap.appendChild(watch);
       var save = element('button', 'save' + (has(item.id) ? ' saved' : ''), has(item.id) ? '✓' : '+'); save.setAttribute('aria-label', (has(item.id) ? 'Remover da lista: ' : 'Salvar na lista: ') + item.title); save.setAttribute('aria-pressed', String(has(item.id))); save.onclick = function () { var index = favorites.indexOf(item.id); if (index === -1) favorites.push(item.id); else favorites.splice(index, 1); store('sala-favoritos', favorites); render(); }; wrap.appendChild(save);
       card.appendChild(wrap); card.appendChild(element('h3', '', item.title)); card.appendChild(element('div', 'meta', item.servers.length ? item.servers.length + ' opções de player' : 'Abrir pela página de origem')); grid.appendChild(card);
     });
@@ -60,6 +67,9 @@
   function chooseServer(server, index) {
     if (!safeUrl(server.url)) return;
     var player = byId('player'); player.textContent = '';
+    byId('external-player').href = server.url; byId('external-player').hidden = false;
+    var status = (window.SALA_STATUS || {})[server.url];
+    byId('player-note').textContent = status ? status.message + ' Teste em 08/11/2026. Você pode tentar a opção externa abaixo; ela pode exibir anúncios e abrir novas janelas.' : 'Reprodução não confirmada. Se ficar preto ou der erro, tente outra opção. Abertura externa pode exibir anúncios e novas janelas.';
     var frame = element('iframe'); frame.title = active.title + ' — ' + server.name;
     frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
     frame.setAttribute('allow', 'autoplay; encrypted-media; fullscreen; picture-in-picture'); frame.setAttribute('allowfullscreen', ''); frame.setAttribute('referrerpolicy', 'no-referrer'); frame.src = server.url; player.appendChild(frame);
@@ -68,18 +78,29 @@
   function openMovie(item) {
     active = item; lastFocus = document.activeElement; byId('modal-title').textContent = item.title; byId('servers').textContent = '';
     byId('source-link').href = safeUrl(item.source) ? item.source : '#';
+    byId('external-player').hidden = true;
+    var isSeries = item.kind === 'serie' || item.kind === 'temporada';
+    byId('show-episodes').hidden = !isSeries;
+    byId('show-episodes').onclick = function () {
+      var prefix = slug(item), season = null, match = prefix.match(/^(.*)-temporada-(\d+)$/);
+      if (item.kind === 'temporada' && match) { prefix=match[1]; season=match[2]; }
+      episodeFilter = {title:item.title, pattern:new RegExp('^' + escapeRegex(prefix) + '-' + (season || '\\d+') + 'x\\d+$')};
+      closeMovie(); byId('kind').value='episodio'; byId('availability').value='all'; byId('search').value=''; onlySaved=false; page=1;
+      ensureKind('episodio', function () { tabs(); byId('section-title').scrollIntoView(); });
+    };
     byId('player').hidden = !item.servers.length;
     byId('server-bar').hidden = !item.servers.length;
-    byId('player-note').textContent = item.servers.length ? 'Escolha um servidor abaixo. A disponibilidade depende do player externo; anúncios internos podem aparecer.' : 'Este registro só tem a página de origem. Ainda não há player importado para assistir aqui.';
+    byId('player-note').textContent = item.servers.length ? 'Endereços importados; reprodução não confirmada. Escolha um servidor. Anúncios internos podem aparecer.' : (isSeries ? 'Você pode consultar os episódios do índice. Ainda não há reprodução integrada confirmada para esta série.' : 'Este registro só tem a página de origem. Ainda não há player importado para assistir aqui.');
     byId('player').textContent = ''; byId('player').appendChild(element('div', 'player-placeholder', item.servers.length ? 'Escolha um servidor para começar.' : 'Este título foi incluído no catálogo, mas seu player ainda não foi importado. Use o link da página de origem abaixo.'));
-    item.servers.forEach(function (server, index) { var button = element('button', '', server.name); button.onclick = function () { chooseServer(server, index); }; byId('servers').appendChild(button); });
+    item.servers.forEach(function (server, index) { var status = (window.SALA_STATUS || {})[server.url]; var button = element('button', '', server.name + (status ? ' · ' + status.label : ' · não testado')); button.onclick = function () { chooseServer(server, index); }; byId('servers').appendChild(button); });
     byId('modal').hidden = false; document.body.classList.add('modal-open'); byId('close').focus();
     store('sala-ultimo', item.id); updateResume(item.id);
   }
   function closeMovie() { byId('player').textContent = ''; byId('modal').hidden = true; document.body.classList.remove('modal-open'); if (lastFocus) lastFocus.focus(); }
   function updateResume(id) { var item = items.filter(function (i) { return i.id === id; })[0]; if (!item) return; var box = byId('resume'); box.textContent = ''; box.appendChild(element('span', '', 'SEU ÚLTIMO TÍTULO')); var button = element('button', '', item.title + '  ↗'); button.onclick = function () { openMovie(item); }; box.appendChild(button); box.hidden = false; }
   byId('search').oninput = function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { page = 1; render(); }, 200); };
-  byId('kind').onchange = function () { page = 1; ensureKind(byId('kind').value, render); };
+  byId('kind').onchange = function () { episodeFilter=null; page = 1; if (byId('kind').value === 'serie' || byId('kind').value === 'temporada') byId('availability').value='all'; ensureKind(byId('kind').value, render); };
+  byId('clear-series').onclick = function () { episodeFilter=null; page=1; render(); };
   byId('availability').onchange = function () { page = 1; render(); };
   byId('previous').onclick = function () { page--; render(); byId('section-title').scrollIntoView(); };
   byId('next').onclick = function () { page++; render(); byId('section-title').scrollIntoView(); };

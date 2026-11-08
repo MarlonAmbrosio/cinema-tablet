@@ -77,3 +77,8 @@ A interface aplica os dados complementares também às categorias carregadas sob
 `status-players.js` registra apenas os cinco endereços do filme Rômulo e Remo testados no navegador, sem extrapolar o resultado a outros filmes. Nenhum foi confirmado reproduzindo: houve acesso negado, 404, recusa ao isolamento e controles em 0:00. O botão de abertura externa é opcional e pode expor anúncios e pop-ups dos servidores externos; não remove o isolamento do player incorporado.
 
 Inclua `players.js` e `status-players.js` na raiz ao publicar. A confirmação de resposta HTTP ou a exibição de controles não representa reprodução validada.
+
+
+Observação posterior no navegador: a verificação automática liberou a página inicial. Foi possível consultar Dança no Gelo: Rumo ao Ouro e preservar três links de episódios em `players.js`. As duas páginas seguintes retornaram erro 521 (servidor de origem indisponível); nenhum vídeo novo foi confirmado. Esse complemento de metadados não aumenta os 52 filmes com links de player.
+
+Quando existem links de episódios obtidos da própria página, a navegação usa esses links. Para as demais séries, busca o maior identificador-base de episódio que coincida com o início do slug da série, acomodando sufixos do índice. Essa associação pelo nome do endereço pode falhar e não substitui metadados de relacionamento verificados.

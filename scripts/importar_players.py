@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 from itertools import zip_longest
 from pathlib import Path
 from urllib.error import HTTPError
-from atualizar_catalogo import movie, read
+from urllib.parse import urljoin, urlparse
+from atualizar_catalogo import movie, read, Page
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -51,13 +52,15 @@ def main():
                 break
             result = movie(item['source'], html)
             result['id'], result['kind'] = item['id'], item['kind']
-            if result['servers']:
-                overlay[item['id']] = result
+            if item['kind'] in ('serie','temporada'):
+                links = [urljoin(item['source'], u) for u in Page(html).links]
+                result['episodes'] = list(dict.fromkeys(u for u in links if urlparse(u).hostname == urlparse(item['source']).hostname and urlparse(u).path.startswith('/episodio/')))
+            overlay[item['id']] = result
             state[item['id']] = {'status':'importado' if result['servers'] else 'sem_player_no_html', 'source':item['source']}
             processed += 1
             print(item['id'], len(result['servers']), flush=True)
         except HTTPError as error:
-            if error.code in (401, 403, 429):
+            if error.code in (401, 403, 429, 500, 502, 503, 504, 521, 522, 524):
                 blocked = {'source':item['source'], 'reason':'HTTP ' + str(error.code) + '; importacao interrompida.'}
                 break
             failures.append({'source':item['source'], 'error':str(error)})
@@ -72,7 +75,7 @@ def main():
         atomic(ROOT / 'players.js', 'window.SALA_PLAYERS=' + json.dumps(overlay, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c') + ';\n')
         time.sleep(1)
     report = {'checkedAt':datetime.now(timezone.utc).isoformat(), 'processedThisRun':processed,
-              'overlayWithPlayers':len(overlay), 'overlayByKind':dict(Counter(i.get('kind','filme') for i in overlay.values())),
+              'overlayEntries':len(overlay), 'overlayWithPlayers':sum(bool(i.get('servers')) for i in overlay.values()), 'overlayByKind':dict(Counter(i.get('kind','filme') for i in overlay.values() if i.get('servers'))),
               'blocked':blocked, 'failures':failures,
               'note':'Players extraidos nao equivalem a reproducao validada. Catalogo original preservado.'}
     atomic(ROOT / 'relatorio-importacao.json', json.dumps(report, ensure_ascii=False, indent=2) + '\n')

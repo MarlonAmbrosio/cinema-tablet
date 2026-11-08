@@ -43,8 +43,8 @@ def read(url):
             raise ValueError('Redirecionamento para outro dominio; importacao interrompida')
         return response.read(3_000_000).decode('utf-8', errors='replace')
 
-def movie(url):
-    page = Page(read(url))
+def movie(url, html=None):
+    page = Page(read(url) if html is None else html)
     title = page.meta.get('og:title', '').strip()
     title = re.sub(r'\s*[-|]\s*Pobreflix.*$', '', title, flags=re.I)
     title = re.sub(r'^Assistir\s+', '', title, flags=re.I)

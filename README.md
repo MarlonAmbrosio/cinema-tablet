@@ -65,3 +65,15 @@ Não há download de vídeos, login, resolução de CAPTCHAs ou remoção de pro
 ## Validação
 
 Contagens, duplicatas, sintaxe JavaScript e integridade do ZIP foram verificadas. Um teste de DOM conferiu busca, paginação, favoritos, carregamento das quatro categorias e criação/remoção do iframe com sandbox. Não substitui teste visual nem reprodução real. Os players não foram validados no SM-T561M; a prévia visual ficou indisponível no navegador desta sessão.
+
+## Importação incremental e limitações atuais
+
+`python scripts/importar_players.py --limite 100` consulta até 100 páginas, alternando filmes, séries e episódios. `--todos` percorre o índice até concluir ou encontrar bloqueios. Retoma pelo checkpoint local `.progresso-players.json`, preserva os endereços anteriores em `players.js` e registra `relatorio-importacao.json`. Uma execução posterior ignora páginas já consultadas com sucesso. Para reexaminar páginas sem player após mudanças no site, remova somente as respectivas entradas desse checkpoint local. Erros HTTP 401/403/429 e desafios anti-bot interrompem a execução, sem contorno. Não há execução agendada nem atualização automática do GitHub.
+
+Na última tentativa, a origem respondeu HTTP 403 antes de importar qualquer título novo. O navegador mostrou verificação Cloudflare. Por isso, permanecem 52 filmes com links de player (16 originais e 36 complementares), sem confirmação geral de reprodução. Não foram importados players de séries nesta execução.
+
+A interface aplica os dados complementares também às categorias carregadas sob demanda. Séries e temporadas oferecem navegação para episódios cujos endereços indexados seguem exatamente o mesmo identificador e numeração. Essa associação é derivada dos slugs do índice, não de metadados de relacionamento verificados. A lista usa os URLs existentes, sem inventar episódios ou players. Selecionar Séries ou Temporadas mostra o índice completo dessa categoria, incluindo itens sem player.
+
+`status-players.js` registra apenas os cinco endereços do filme Rômulo e Remo testados no navegador, sem extrapolar o resultado a outros filmes. Nenhum foi confirmado reproduzindo: houve acesso negado, 404, recusa ao isolamento e controles em 0:00. O botão de abertura externa é opcional e pode expor anúncios e pop-ups dos servidores externos; não remove o isolamento do player incorporado.
+
+Inclua `players.js` e `status-players.js` na raiz ao publicar. A confirmação de resposta HTTP ou a exibição de controles não representa reprodução validada.

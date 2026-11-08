@@ -14,6 +14,7 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import urljoin, urlparse
 from atualizar_catalogo import movie, read, Page
+from versionar_assets import main as versionar_assets
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -79,6 +80,7 @@ def main():
               'blocked':blocked, 'failures':failures,
               'note':'Players extraidos nao equivalem a reproducao validada. Catalogo original preservado.'}
     atomic(ROOT / 'relatorio-importacao.json', json.dumps(report, ensure_ascii=False, indent=2) + '\n')
+    versionar_assets(ROOT)
     print(json.dumps(report, ensure_ascii=True), flush=True)
 
 if __name__ == '__main__':

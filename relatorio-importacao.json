@@ -10,5 +10,11 @@
     "reason": "HTTP 403; importacao interrompida."
   },
   "failures": [],
-  "note": "Players extraidos nao equivalem a reproducao validada. Catalogo original preservado."
+  "note": "Players extraidos nao equivalem a reproducao validada. Catalogo original preservado.",
+  "browserObservation": {
+    "seriesMetadataImported": 1,
+    "episodeLinksFound": 3,
+    "subsequentPages": "HTTP 521: Web server is down",
+    "newPlayableTitlesConfirmed": 0
+  }
 }

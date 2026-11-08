@@ -6,7 +6,7 @@
     items = expand(window.CATALOGO_COMPACTO);
     window.CATALOGO_COMPACTO = null;
   }
-  function enrich(item) { var extra = (window.SALA_PLAYERS || {})[item.id]; if (extra) { item.title = extra.title; item.poster = extra.poster; item.servers = extra.servers; } item.searchText = normalize(item.title); return item; }
+  function enrich(item) { var extra = (window.SALA_PLAYERS || {})[item.id]; if (extra) { item.title = extra.title; item.poster = extra.poster; item.servers = extra.servers; item.episodes = extra.episodes; } item.searchText = normalize(item.title); return item; }
   items.forEach(enrich);
   var page = 1, pageSize = 36, totalPages = 1, searchTimer = null;
   function normalize(text) { text = text.toLowerCase(); return typeof text.normalize === 'function' ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : text; }
@@ -43,7 +43,7 @@
   function render() {
     var query = normalize(byId('search').value), kind = byId('kind').value;
     var readyOnly = byId('availability').value === 'ready';
-    var list = items.filter(function (item) { return (!episodeFilter || (item.kind === 'episodio' && episodeFilter.pattern.test(slug(item)))) && (!readyOnly || item.servers.length > 0) && (!onlySaved || has(item.id)) && (!kind || (item.kind || 'filme') === kind) && item.searchText.indexOf(query) !== -1; });
+    var list = items.filter(function (item) { return (!episodeFilter || (item.kind === 'episodio' && (episodeFilter.sources ? episodeFilter.sources.indexOf(item.source) !== -1 : episodeFilter.pattern.test(slug(item))))) && (!readyOnly || item.servers.length > 0) && (!onlySaved || has(item.id)) && (!kind || (item.kind || 'filme') === kind) && item.searchText.indexOf(query) !== -1; });
     if (episodeFilter) list.sort(function (a,b) { var x=slug(a).match(/-(\d+)x(\d+)$/), y=slug(b).match(/-(\d+)x(\d+)$/); return Number(x[1])-Number(y[1]) || Number(x[2])-Number(y[2]); });
     totalPages = Math.max(1, Math.ceil(list.length / pageSize)); page = Math.max(1, Math.min(page, totalPages));
     var grid = byId('grid'); grid.textContent = '';
@@ -84,9 +84,13 @@
     byId('show-episodes').onclick = function () {
       var prefix = slug(item), season = null, match = prefix.match(/^(.*)-temporada-(\d+)$/);
       if (item.kind === 'temporada' && match) { prefix=match[1]; season=match[2]; }
-      episodeFilter = {title:item.title, pattern:new RegExp('^' + escapeRegex(prefix) + '-' + (season || '\\d+') + 'x\\d+$')};
       closeMovie(); byId('kind').value='episodio'; byId('availability').value='all'; byId('search').value=''; onlySaved=false; page=1;
-      ensureKind('episodio', function () { tabs(); byId('section-title').scrollIntoView(); });
+      ensureKind('episodio', function () {
+        var best = '';
+        if (!item.episodes) items.forEach(function (entry) { if (entry.kind !== 'episodio') return; var base=slug(entry).replace(/-\d+x\d+$/, ''); if ((prefix === base || prefix.indexOf(base + '-') === 0) && base.length > best.length) best=base; });
+        episodeFilter = {title:item.title, sources:item.episodes, pattern:new RegExp('^' + escapeRegex(best || prefix) + '-' + (season || '\\d+') + 'x\\d+$')};
+        tabs(); byId('section-title').scrollIntoView();
+      });
     };
     byId('player').hidden = !item.servers.length;
     byId('server-bar').hidden = !item.servers.length;
